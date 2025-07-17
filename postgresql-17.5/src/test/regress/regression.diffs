@@ -1,0 +1,11 @@
+diff -U3 /home/olegg/summer_school_PG/postgresql-17.5/src/test/regress/expected/test_setup.out /home/olegg/summer_school_PG/postgresql-17.5/src/test/regress/results/test_setup.out
+--- /home/olegg/summer_school_PG/postgresql-17.5/src/test/regress/expected/test_setup.out	2025-05-06 03:28:35.000000000 +0700
++++ /home/olegg/summer_school_PG/postgresql-17.5/src/test/regress/results/test_setup.out	2025-07-03 17:25:28.705392867 +0700
+@@ -21,6 +21,7 @@
+ -- Create a tablespace we can use in tests.
+ SET allow_in_place_tablespaces = true;
+ CREATE TABLESPACE regress_tblspace LOCATION '';
++ERROR:  tablespace "regress_tblspace" already exists
+ --
+ -- These tables have traditionally been referenced by many tests,
+ -- so create and populate them.  Insert only non-error values here.

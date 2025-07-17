@@ -1,0 +1,8 @@
+2025-07-04 11:51:09.630 +07 [34124] LOG:  starting PostgreSQL 17.5 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0, 64-bit
+2025-07-04 11:51:09.630 +07 [34124] LOG:  listening on Unix socket "/tmp/vXseLS3Pgo/.s.PGSQL.15679"
+2025-07-04 11:51:09.631 +07 [34127] LOG:  database system was shut down at 2025-07-04 11:51:09 +07
+2025-07-04 11:51:09.632 +07 [34124] LOG:  database system is ready to accept connections
+2025-07-04 11:51:09.734 +07 [34132] 001_hello.pl LOG:  statement: CREATE EXTENSION hello_world
+2025-07-04 11:51:09.740 +07 [34134] 001_hello.pl LOG:  statement: SELECT hello_world_c('Oleg');
+2025-07-04 11:51:09.743 +07 [34124] LOG:  received immediate shutdown request
+2025-07-04 11:51:09.745 +07 [34124] LOG:  database system is shut down

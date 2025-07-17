@@ -1,0 +1,3 @@
+comment = 'Пример расширения hello_world'
+module_pathname = '$libdir/hello_world'
+default_version = '1.0'

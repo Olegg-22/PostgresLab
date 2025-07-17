@@ -1,0 +1,3 @@
+comment = 'Раcширение my_schedule'
+module_pathname = '$libdir/my_schedule'
+default_version = '1.0'

@@ -1,0 +1,56 @@
+# Checking port 15679
+# Found port 15679
+Name: hello_test
+Data directory: /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata
+Backup directory: /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/backup
+Archive directory: /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/archives
+Connection string: port=15679 host=/tmp/vXseLS3Pgo
+Log file: /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/log/001_hello_hello_test.log
+[11:51:08.949](0.009s) # initializing database system by running initdb
+# Running: initdb -D /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata -A trust -N
+The files belonging to this database system will be owned by user "olegg".
+This user must also own the server process.
+
+The database cluster will be initialized with this locale configuration:
+  locale provider:   libc
+  LC_COLLATE:  C.UTF-8
+  LC_CTYPE:    C.UTF-8
+  LC_MESSAGES: C
+  LC_MONETARY: C.UTF-8
+  LC_NUMERIC:  C.UTF-8
+  LC_TIME:     C.UTF-8
+The default database encoding has accordingly been set to "UTF8".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+creating directory /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata ... ok
+creating subdirectories ... ok
+selecting dynamic shared memory implementation ... posix
+selecting default "max_connections" ... 100
+selecting default "shared_buffers" ... 128MB
+selecting default time zone ... Asia/Novosibirsk
+creating configuration files ... ok
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+
+Sync to disk skipped.
+The data directory might become corrupt if the operating system crashes.
+
+Success. You can now start the database server using:
+
+    pg_ctl -D /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata -l logfile start
+
+# Running: /home/olegg/summer_school_PG/pg17_install/lib/postgresql/pgxs/src/makefiles/../../src/test/regress/pg_regress --config-auth /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata
+### Starting node "hello_test"
+# Running: pg_ctl -w -D /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata -l /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/log/001_hello_hello_test.log -o --cluster-name=hello_test start
+waiting for server to start.... done
+server started
+# Postmaster PID for node "hello_test" is 34124
+[11:51:09.741](0.792s) ok 1 - C-функция работает корректно
+[11:51:09.742](0.000s) 1..1
+### Stopping node "hello_test" using mode immediate
+# Running: pg_ctl -D /home/olegg/summer_school_PG/postgresql-17.5/contrib/hello_world/tmp_check/t_001_hello_hello_test_data/pgdata -m immediate stop
+waiting for server to shut down.... done
+server stopped
+# No postmaster PID for node "hello_test"

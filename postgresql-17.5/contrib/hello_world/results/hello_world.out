@@ -1,0 +1,19 @@
+CREATE EXTENSION hello_world;
+SELECT hello_world_c('world');
+    hello_world_c    
+---------------------
+ Hello from c, world
+(1 row)
+
+SELECT hello_world_c('Abrick');
+    hello_world_c     
+----------------------
+ Hello from c, Abrick
+(1 row)
+
+SELECT hello_world('world');
+ hello_world  
+--------------
+ Hello, world
+(1 row)
+
