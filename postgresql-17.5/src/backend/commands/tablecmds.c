@@ -20108,7 +20108,7 @@ GetParentedForeignKeyRefs(Relation partition)
 	 */
 	if (RelationGetIndexList(partition) == NIL ||
 		bms_is_empty(RelationGetIndexAttrBitmap(partition,
-												INDEX_ATTR_BITMAP_KEY)))
+												INDEX_ATTR_BITMAP_KEY, NULL)))
 		return NIL;
 
 	/* Search for constraints referencing this table */

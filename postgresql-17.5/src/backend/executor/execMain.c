@@ -2363,7 +2363,7 @@ ExecUpdateLockMode(EState *estate, ResultRelInfo *relinfo)
 	 */
 	updatedCols = ExecGetAllUpdatedCols(relinfo, estate);
 	keyCols = RelationGetIndexAttrBitmap(relinfo->ri_RelationDesc,
-										 INDEX_ATTR_BITMAP_KEY);
+										 INDEX_ATTR_BITMAP_KEY, NULL);
 
 	if (bms_overlap(keyCols, updatedCols))
 		return LockTupleExclusive;

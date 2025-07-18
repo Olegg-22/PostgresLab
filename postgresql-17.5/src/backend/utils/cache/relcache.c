@@ -270,6 +270,12 @@ typedef struct opclasscacheent
 
 static HTAB *OpClassCache = NULL;
 
+typedef struct IndexAttrs {
+    Bitmapset* index_attrs;
+    List *partialIndexAttrs;
+} IndexAttrs;
+
+static IndexAttrs * GetIndexAttr(Relation relation, IndexAttrBitmapKind attrKind);
 
 /* non-export function prototypes */
 
@@ -5246,44 +5252,53 @@ RelationGetIndexPredicate(Relation relation)
  * be bms_free'd when not needed anymore.
  */
 
-typedef struct IndexAttrs {
-    Bitmapset* index_attrs;
-    List *partialIndexAttrs;
-} IndexAttrs;
-
-Bitmapset *
-RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
+IndexAttrs *
+GetIndexAttr(Relation relation, IndexAttrBitmapKind attrKind)
 {
+    IndexAttrs  *result;
+
 	Bitmapset  *uindexattrs;	/* columns in unique indexes */
 	Bitmapset  *pkindexattrs;	/* columns in the primary index */
 	Bitmapset  *idindexattrs;	/* columns in the replica identity */
 	Bitmapset  *hotblockingattrs;	/* columns with HOT blocking indexes */
 	Bitmapset  *summarizedattrs;	/* columns with summarizing indexes */
-	List	   *indexoidlist;
+    List        *partialIndexAttrs;
+
+    List	   *indexoidlist;
 	List	   *newindexoidlist;
 	Oid			relpkindex;
 	Oid			relreplindex;
 	ListCell   *l;
 	MemoryContext oldcxt;
 
+    result = palloc0(sizeof(IndexAttrs));
+    partialIndexAttrs = NIL;
 	/* Quick exit if we already computed the result. */
 	if (relation->rd_attrsvalid)
 	{
 		switch (attrKind)
 		{
-			case INDEX_ATTR_BITMAP_KEY:
-				return bms_copy(relation->rd_keyattr);
-			case INDEX_ATTR_BITMAP_PRIMARY_KEY:
-				return bms_copy(relation->rd_pkattr);
-			case INDEX_ATTR_BITMAP_IDENTITY_KEY:
-				return bms_copy(relation->rd_idattr);
-			case INDEX_ATTR_BITMAP_HOT_BLOCKING:
-				return bms_copy(relation->rd_hotblockingattr);
-			case INDEX_ATTR_BITMAP_SUMMARIZED:
-				return bms_copy(relation->rd_summarizedattr);
+            case INDEX_ATTR_BITMAP_KEY:
+                result->index_attrs = bms_copy(relation->rd_keyattr);
+                break;
+            case INDEX_ATTR_BITMAP_PRIMARY_KEY:
+                result->index_attrs = bms_copy(relation->rd_pkattr);
+                break;
+            case INDEX_ATTR_BITMAP_IDENTITY_KEY:
+                result->index_attrs = bms_copy(relation->rd_idattr);
+                break;
+            case INDEX_ATTR_BITMAP_HOT_BLOCKING:
+                result->index_attrs = bms_copy(relation->rd_hotblockingattr);
+                break;
+            case INDEX_ATTR_BITMAP_SUMMARIZED:
+                result->index_attrs = bms_copy(relation->rd_summarizedattr);
+                break;
 			default:
 				elog(ERROR, "unknown attrKind %u", attrKind);
+                return NULL;
 		}
+        result->partialIndexAttrs = list_copy(relation->rd_partialindexes);
+        return result;
 	}
 
 	/* Fast path if definitely no indexes */
@@ -5337,9 +5352,12 @@ restart:
 		bool		isKey;		/* candidate key */
 		bool		isPK;		/* primary key */
 		bool		isIDKey;	/* replica identity index */
-		Bitmapset **attrs;
 
-		indexDesc = index_open(indexOid, AccessShareLock);
+        Bitmapset  *indexattrs;
+        bool        isPartial;
+
+        indexattrs = NULL;
+        indexDesc = index_open(indexOid, AccessShareLock);
 
 		/*
 		 * Extract index expressions and index predicate.  Note: Don't use
@@ -5352,19 +5370,15 @@ restart:
 
 		datum = heap_getattr(indexDesc->rd_indextuple, Anum_pg_index_indexprs,
 							 GetPgIndexDescriptor(), &isnull);
-		if (!isnull)
-			indexExpressions = stringToNode(TextDatumGetCString(datum));
-		else
-			indexExpressions = NULL;
+        indexExpressions = isnull ? NULL : stringToNode(TextDatumGetCString(datum));
 
-		datum = heap_getattr(indexDesc->rd_indextuple, Anum_pg_index_indpred,
+        datum = heap_getattr(indexDesc->rd_indextuple, Anum_pg_index_indpred,
 							 GetPgIndexDescriptor(), &isnull);
-		if (!isnull)
-			indexPredicate = stringToNode(TextDatumGetCString(datum));
-		else
-			indexPredicate = NULL;
+        indexPredicate = isnull ? NULL : stringToNode(TextDatumGetCString(datum));
 
-		/* Can this index be referenced by a foreign key? */
+        isPartial = (indexPredicate != NULL);
+
+        /* Can this index be referenced by a foreign key? */
 		isKey = indexDesc->rd_index->indisunique &&
 			indexExpressions == NULL &&
 			indexPredicate == NULL;
@@ -5380,10 +5394,6 @@ restart:
 		 * may still need to update it (if the attributes were modified). So
 		 * decide which bitmap we'll update in the following loop.
 		 */
-		if (indexDesc->rd_indam->amsummarizing)
-			attrs = &summarizedattrs;
-		else
-			attrs = &hotblockingattrs;
 
 		/* Collect simple attribute references */
 		for (i = 0; i < indexDesc->rd_index->indnatts; i++)
@@ -5406,7 +5416,7 @@ restart:
 			 */
 			if (attrnum != 0)
 			{
-				*attrs = bms_add_member(*attrs,
+                indexattrs = bms_add_member(indexattrs,
 										attrnum - FirstLowInvalidHeapAttributeNumber);
 
 				if (isKey && i < indexDesc->rd_index->indnkeyatts)
@@ -5424,10 +5434,24 @@ restart:
 		}
 
 		/* Collect all attributes used in expressions, too */
-		pull_varattnos(indexExpressions, 1, attrs);
+		pull_varattnos(indexExpressions, 1, &indexattrs);
 
-		/* Collect all attributes in the index predicate, too */
-		pull_varattnos(indexPredicate, 1, attrs);
+        if (isPartial) {
+            /* For partial indexes, create and store PartialIndexAttrs */
+            PartialIndexAttrs *pinfo = palloc(sizeof(PartialIndexAttrs));
+            pinfo->predicate = indexPredicate;
+            pinfo->columns = bms_copy(indexattrs);
+            partialIndexAttrs = lappend(partialIndexAttrs, pinfo);
+
+            /* Collect all attributes in the index predicate, too */
+            pull_varattnos(indexPredicate, 1, &indexattrs);
+        }
+
+        /* Add to appropriate bitmap based on index type */
+        if (indexDesc->rd_indam->amsummarizing)
+            summarizedattrs = bms_union(summarizedattrs, indexattrs);
+        else
+            hotblockingattrs = bms_union(hotblockingattrs, indexattrs);
 
 		index_close(indexDesc, AccessShareLock);
 	}
@@ -5457,7 +5481,7 @@ restart:
 		bms_free(idindexattrs);
 		bms_free(hotblockingattrs);
 		bms_free(summarizedattrs);
-
+        list_free_deep(partialIndexAttrs);
 		goto restart;
 	}
 
@@ -5473,41 +5497,81 @@ restart:
 	relation->rd_hotblockingattr = NULL;
 	bms_free(relation->rd_summarizedattr);
 	relation->rd_summarizedattr = NULL;
+    list_free_deep(relation->rd_partialindexes);
+    relation->rd_partialindexes = NIL;
 
-	/*
-	 * Now save copies of the bitmaps in the relcache entry.  We intentionally
-	 * set rd_attrsvalid last, because that's the one that signals validity of
-	 * the values; if we run out of memory before making that copy, we won't
-	 * leave the relcache entry looking like the other ones are valid but
-	 * empty.
-	 */
+    /*
+     * Now save copies of the bitmaps in the relcache entry.  We intentionally
+     * set rd_attrsvalid last, because that's the one that signals validity of
+     * the values; if we run out of memory before making that copy, we won't
+     * leave the relcache entry looking like the other ones are valid but
+     * empty.
+     */
 	oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
 	relation->rd_keyattr = bms_copy(uindexattrs);
 	relation->rd_pkattr = bms_copy(pkindexattrs);
 	relation->rd_idattr = bms_copy(idindexattrs);
 	relation->rd_hotblockingattr = bms_copy(hotblockingattrs);
 	relation->rd_summarizedattr = bms_copy(summarizedattrs);
-	relation->rd_attrsvalid = true;
+    relation->rd_partialindexes = list_copy(partialIndexAttrs);
+    relation->rd_attrsvalid = true;
 	MemoryContextSwitchTo(oldcxt);
 
 	/* We return our original working copy for caller to play with */
 	switch (attrKind)
 	{
-		case INDEX_ATTR_BITMAP_KEY:
-			return uindexattrs;
-		case INDEX_ATTR_BITMAP_PRIMARY_KEY:
-			return pkindexattrs;
-		case INDEX_ATTR_BITMAP_IDENTITY_KEY:
-			return idindexattrs;
-		case INDEX_ATTR_BITMAP_HOT_BLOCKING:
-			return hotblockingattrs;
-		case INDEX_ATTR_BITMAP_SUMMARIZED:
-			return summarizedattrs;
+        case INDEX_ATTR_BITMAP_KEY:
+            result->index_attrs = uindexattrs;
+            break;
+        case INDEX_ATTR_BITMAP_PRIMARY_KEY:
+            result->index_attrs = pkindexattrs;
+            break;
+        case INDEX_ATTR_BITMAP_IDENTITY_KEY:
+            result->index_attrs = idindexattrs;
+            break;
+        case INDEX_ATTR_BITMAP_HOT_BLOCKING:
+            result->index_attrs = hotblockingattrs;
+            break;
+        case INDEX_ATTR_BITMAP_SUMMARIZED:
+            result->index_attrs = summarizedattrs;
+            break;
 		default:
 			elog(ERROR, "unknown attrKind %u", attrKind);
 			return NULL;
 	}
+    result->partialIndexAttrs = partialIndexAttrs;
+
+    return result;
 }
+
+Bitmapset *
+RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind, HeapTuple newtup) {
+    IndexAttrs * result;
+    Bitmapset* index_attrs;
+    List* listPartialIndexAttrs;
+    ListCell *lc;
+
+    result = GetIndexAttr(relation, attrKind);
+    if (result == NULL) {
+        return NULL;
+    }
+    index_attrs = result->index_attrs;
+    listPartialIndexAttrs = result->partialIndexAttrs;
+
+    if (listPartialIndexAttrs == NIL) {
+        return index_attrs;
+    }
+
+    foreach(lc, listPartialIndexAttrs) {
+        PartialIndexAttrs *partialIndexAttr;
+        partialIndexAttr = lfirst(lc);
+        if(В этом месте нужно проверить подходит ли newtup под условия предиката) {
+            index_attrs |= partialIndexAttr->columns;
+        }
+    }
+    return index_attrs;
+}
+
 
 /*
  * RelationGetIdentityKeyBitmap -- get a bitmap of replica identity attribute

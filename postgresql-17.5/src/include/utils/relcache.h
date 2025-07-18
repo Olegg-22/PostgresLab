@@ -14,6 +14,7 @@
 #ifndef RELCACHE_H
 #define RELCACHE_H
 
+#include "access/htup.h"
 #include "access/tupdesc.h"
 #include "common/relpath.h"
 #include "nodes/bitmapset.h"
@@ -66,7 +67,7 @@ typedef enum IndexAttrBitmapKind
 } IndexAttrBitmapKind;
 
 extern Bitmapset *RelationGetIndexAttrBitmap(Relation relation,
-											 IndexAttrBitmapKind attrKind);
+											 IndexAttrBitmapKind attrKind, HeapTuple newtup);
 
 extern Bitmapset *RelationGetIdentityKeyBitmap(Relation relation);
 

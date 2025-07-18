@@ -312,7 +312,7 @@ pub_rf_contains_invalid_column(Oid pubid, Relation relation, List *ancestors,
 
 		/* Remember columns that are part of the REPLICA IDENTITY */
 		bms = RelationGetIndexAttrBitmap(relation,
-										 INDEX_ATTR_BITMAP_IDENTITY_KEY);
+										 INDEX_ATTR_BITMAP_IDENTITY_KEY, NULL);
 
 		context.bms_replident = bms;
 		rfnode = stringToNode(TextDatumGetCString(rfdatum));
@@ -383,7 +383,7 @@ pub_collist_contains_invalid_column(Oid pubid, Relation relation, List *ancestor
 
 		/* Remember columns that are part of the REPLICA IDENTITY */
 		idattrs = RelationGetIndexAttrBitmap(relation,
-											 INDEX_ATTR_BITMAP_IDENTITY_KEY);
+											 INDEX_ATTR_BITMAP_IDENTITY_KEY, NULL);
 
 		/*
 		 * Attnums in the bitmap returned by RelationGetIndexAttrBitmap are

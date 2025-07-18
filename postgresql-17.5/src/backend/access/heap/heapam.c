@@ -3240,12 +3240,12 @@ heap_update(Relation relation, ItemPointer otid, HeapTuple newtup,
 	 * relcache flush happening midway through.
 	 */
 	hot_attrs = RelationGetIndexAttrBitmap(relation,
-										   INDEX_ATTR_BITMAP_HOT_BLOCKING);
+										   INDEX_ATTR_BITMAP_HOT_BLOCKING, newtup);
 	sum_attrs = RelationGetIndexAttrBitmap(relation,
-										   INDEX_ATTR_BITMAP_SUMMARIZED);
-	key_attrs = RelationGetIndexAttrBitmap(relation, INDEX_ATTR_BITMAP_KEY);
+										   INDEX_ATTR_BITMAP_SUMMARIZED, NULL);
+	key_attrs = RelationGetIndexAttrBitmap(relation, INDEX_ATTR_BITMAP_KEY, NULL);
 	id_attrs = RelationGetIndexAttrBitmap(relation,
-										  INDEX_ATTR_BITMAP_IDENTITY_KEY);
+										  INDEX_ATTR_BITMAP_IDENTITY_KEY, NULL);
 	interesting_attrs = NULL;
 	interesting_attrs = bms_add_members(interesting_attrs, hot_attrs);
 	interesting_attrs = bms_add_members(interesting_attrs, sum_attrs);
@@ -9113,7 +9113,7 @@ ExtractReplicaIdentity(Relation relation, HeapTuple tp, bool key_required,
 
 	/* find out the replica identity columns */
 	idattrs = RelationGetIndexAttrBitmap(relation,
-										 INDEX_ATTR_BITMAP_IDENTITY_KEY);
+										 INDEX_ATTR_BITMAP_IDENTITY_KEY, NULL);
 
 	/*
 	 * If there's no defined replica identity columns, treat as !key_required.
