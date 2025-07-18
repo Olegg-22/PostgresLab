@@ -49,6 +49,16 @@ typedef struct LockInfoData
 typedef LockInfoData *LockInfo;
 
 /*
+ * Struct for partial indexes
+ * with cols and predicate
+ */
+
+typedef struct PartialIndexAttrs{
+    Node* predicate;
+    Bitmapset* columns;
+} PartialIndexAttrs;
+
+/*
  * Here are the contents of a relation cache entry.
  */
 
@@ -164,6 +174,7 @@ typedef struct RelationData
 	Bitmapset  *rd_idattr;		/* included in replica identity index */
 	Bitmapset  *rd_hotblockingattr; /* cols blocking HOT update */
 	Bitmapset  *rd_summarizedattr;	/* cols indexed by summarizing indexes */
+    List *rd_partialindexes; /* list cols for all partial indexes */
 
 	PublicationDesc *rd_pubdesc;	/* publication descriptor, or NULL */
 
