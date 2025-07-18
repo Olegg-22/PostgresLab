@@ -5420,6 +5420,7 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind, Heap
         pfree(result);
         return index_attrs;
     }
+
     estate = CreateExecutorState();
     oldctx = MemoryContextSwitchTo(estate->es_query_cxt);
 
@@ -5431,15 +5432,20 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind, Heap
         bool satisfies_predicate;
         partialIndexAttr = lfirst(lc);
 
+        if (partialIndexAttr->predicate == NULL)
+            continue;
+
         econtext = GetPerTupleExprContext(estate);
         slot = MakeSingleTupleTableSlot(RelationGetDescr(relation), &TTSOpsHeapTuple);
         ExecStoreHeapTuple(newtup, slot, false);
         econtext->ecxt_scantuple = slot;
 
-        predicate = ExecPrepareExpr((Expr *) partialIndexAttr->predicate, estate);
+        predicate = ExecInitQual((List *)partialIndexAttr->predicate, NULL);
         satisfies_predicate = ExecQual(predicate, econtext);
 
         ExecDropSingleTupleTableSlot(slot);
+        if (predicate)
+            pfree(predicate);
 
         if (satisfies_predicate) {
             Bitmapset *new_attrs = bms_copy(partialIndexAttr->columns);
