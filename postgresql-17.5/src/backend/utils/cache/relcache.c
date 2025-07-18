@@ -5245,6 +5245,12 @@ RelationGetIndexPredicate(Relation relation)
  * The returned result is palloc'd in the caller's memory context and should
  * be bms_free'd when not needed anymore.
  */
+
+typedef struct IndexAttrs {
+    Bitmapset* index_attrs;
+    List *partialIndexAttrs;
+} IndexAttrs;
+
 Bitmapset *
 RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
 {
